@@ -252,6 +252,7 @@ def character_sheet(name, engine=None):
         "engine": eng,
         "voice": voice,
         "match_reference_pitch": False,
+        "allow_pitch_down": False,
         "reference_f0_median_hz": None,
         "source": {"type": "character_preset", "character": name},
     }
@@ -329,6 +330,14 @@ def resolve_sheet(sheet):
         "target_gap_sec": gap_sec,
         "pitch_shift_st": pitch_st,
         "match_reference_pitch": bool(sheet.get("match_reference_pitch")),
+        # 安全策（2026-11-18）: お手本寄せの下方向シフトは、シートで
+        # allow_pitch_down を明示的に真にした場合だけ有効。その場合も
+        # pitch_down_max_st（既定1.0半音）までしか下げない。大きな
+        # 下げは高い声を「野太く」不自然にする（デモ実証の教訓）。
+        "allow_pitch_down": bool(sheet.get("allow_pitch_down")),
+        "pitch_down_max_st": (float(sheet["pitch_down_max_st"])
+                              if sheet.get("pitch_down_max_st")
+                              is not None else 1.0),
         "reference_f0_median_hz": sheet.get("reference_f0_median_hz"),
         "prosody": sheet.get("prosody"),
         "source": sheet.get("source"),
@@ -383,6 +392,17 @@ def apply_adjustments(sheet, args):
         overrides["target_gap_sec"] = args.set_gap_sec
     if getattr(args, "set_pitch_st", None) is not None:
         overrides["pitch_shift_st"] = args.set_pitch_st
+    # 文単位ピッチ整形は opt-in（安全策 2026-11-18）。既定はオフで、
+    # 明示指定があったときだけシート側の apply_contour を立てる。
+    if getattr(args, "apply_contour", False):
+        prosody = sheet.get("prosody")
+        if not prosody:
+            raise AdjustError(
+                "--apply-contour を指定しましたが、このシートには"
+                "文単位の型（prosody）がありません。\n"
+                "対処: metrics.json から make-sheet で作ったシートを"
+                "使ってください。", 2)
+        prosody["apply_contour"] = True
     return sheet
 
 
@@ -955,6 +975,7 @@ def cmd_make_sheet(args):
         "engine": args.engine,
         "voice": args.voice or "",
         "match_reference_pitch": False,
+        "allow_pitch_down": False,
         "reference_f0_median_hz": (round(float(f0["median_hz"]), 1)
                                    if f0.get("median_hz") else None),
         "source": {"type": "metrics",
@@ -962,8 +983,9 @@ def cmd_make_sheet(args):
                    "title": metrics.get("title")},
     }
     # 文単位の型（文末パターン比率・文ごとのピッチ変化と抑揚の幅）も
-    # シートに持たせる。生成側は prosody.apply_contour が真のとき、
-    # 文単位のピッチ整形でこの型に寄せる。
+    # シートに持たせる。ただし整形（prosody.apply_contour）は安全策で
+    # 既定オフ——型データは記録するだけに留め、有効化は opt-in
+    # （シートで明示 or synthesize の --apply-contour）。
     if vp is not None:
         try:
             sheet["prosody"] = vp.prosody_for_sheet(
@@ -1055,14 +1077,35 @@ def cmd_synthesize(args):
         # 2) 生成直後のF0を測る（ピッチ寄せの材料＋レポート用）
         pitch_st = eff["pitch_shift_st"]
         match_delta = 0.0
+        match_note = ""
         speech_only = os.path.join(workdir, "speech_only.wav")
         concat_wavs(raw_segs, speech_only)
         base_f0 = measure_f0_median(speech_only)
         if eff["match_reference_pitch"]:
             ref = eff["reference_f0_median_hz"]
             if ref and base_f0:
-                match_delta = 12.0 * math.log2(float(ref) / base_f0)
-                match_delta = max(-6.0, min(6.0, match_delta))
+                raw_delta = 12.0 * math.log2(float(ref) / base_f0)
+                raw_delta = max(-6.0, min(6.0, raw_delta))
+                if raw_delta < 0:
+                    # 安全策（2026-11-18）: 下方向の寄せは既定で無効。
+                    # 高い声を大きく下げると「野太く」不自然になる
+                    # （デモ実証でボブ評価「怖い・野太い」）。シートで
+                    # allow_pitch_down を明示した場合のみ、上限つきで
+                    # 適用する。
+                    if eff["allow_pitch_down"]:
+                        match_delta = max(raw_delta,
+                                          -abs(eff["pitch_down_max_st"]))
+                        if match_delta != raw_delta:
+                            match_note = (
+                                f"下方向の寄せ {raw_delta:+.2f}半音は上限 "
+                                f"{eff['pitch_down_max_st']:.1f}半音で制限")
+                    else:
+                        match_note = (
+                            f"下方向の寄せ {raw_delta:+.2f}半音は安全策で"
+                            "無効（シートの allow_pitch_down が未指定）")
+                        print(f"注意: {match_note}。", file=sys.stderr)
+                else:
+                    match_delta = raw_delta
                 pitch_st += match_delta
             else:
                 print("警告: お手本F0へ寄せる指定ですが、F0を測れなかった"
@@ -1150,7 +1193,8 @@ def cmd_synthesize(args):
                               tempo, pitch_st, match_delta, base_f0,
                               vad, meas_cpm, final_f0,
                               out_wav, out_mp3,
-                              meas_prosody=meas_prosody)
+                              meas_prosody=meas_prosody,
+                              match_note=match_note)
         report_path = os.path.join(args.out_dir, "report.md")
         with open(report_path, "w", encoding="utf-8") as f:
             f.write(report)
@@ -1180,7 +1224,7 @@ def fmt_or_dash(x, digits=1):
 
 def build_report(eff, sentences, total_chars, raw_cpm, tempo, pitch_st,
                  match_delta, base_f0, vad, meas_cpm, final_f0,
-                 out_wav, out_mp3, meas_prosody=None):
+                 out_wav, out_mp3, meas_prosody=None, match_note=""):
     st = eff["stats"]
     lines = []
     lines.append(f"# 音声調整レポート — {eff['name']}")
@@ -1210,9 +1254,12 @@ def build_report(eff, sentences, total_chars, raw_cpm, tempo, pitch_st,
     shift_note = f"指定 {eff['pitch_shift_st']:+.2f}半音"
     if match_delta:
         shift_note += f" ＋ お手本寄せ {match_delta:+.2f}半音"
+    pitch_remark = "rubberband で適用"
+    if match_note:
+        pitch_remark += f"／{match_note}"
     lines.append(f"| ピッチ | {shift_note} | F0中央値 "
                  f"{fmt_or_dash(final_f0)} Hz（生成直後 "
-                 f"{fmt_or_dash(base_f0)} Hz） | rubberband で適用 |")
+                 f"{fmt_or_dash(base_f0)} Hz） | {pitch_remark} |")
     lines.append(f"| 強弱（抑揚） | ステータス {st['expressiveness']:.0f} "
                  "| 数値担保なし | スタイルプロンプトへの反映のみ |")
     prosody = eff.get("prosody") or {}
@@ -1264,6 +1311,12 @@ def build_report(eff, sentences, total_chars, raw_cpm, tempo, pitch_st,
                  "話速・間・ピッチ中央値と、文単位の型（ピッチ変化と"
                  "抑揚の幅の中央値。ただし文を3分割して整形する近似で、"
                  "文内の細かい抑揚カーブそのものの移植ではありません）。")
+    lines.append("※安全策（2026-11-18）: ピッチのお手本寄せは下方向が"
+                 "既定で無効（シートの allow_pitch_down を明示した"
+                 "場合のみ上限つきで適用）。文単位のピッチ整形は"
+                 "既定オフ（--apply-contour で opt-in）。類似度や"
+                 "数値の一致は自然さの保証ではないため、提出前は"
+                 "必ず試聴チェックを通すこと。")
     return "\n".join(lines) + "\n"
 
 
@@ -1313,6 +1366,10 @@ def main():
                     help="上級調整: 文間の間（秒）を数値で直接指定")
     sy.add_argument("--set-pitch-st", type=float,
                     help="上級調整: ピッチシフト（半音）を数値で直接指定")
+    sy.add_argument("--apply-contour", action="store_true",
+                    help="opt-in: 文単位のピッチ整形を有効化する"
+                         "（既定オフ。local土台では不自然になり得るため"
+                         "試聴確認の上で使うこと）")
     sy.add_argument("--save-sheet",
                     help="調整後のシートをマイキャラとして保存するJSONパス")
     sy.add_argument("--sheet-name", help="--save-sheet で保存するシートの名前")

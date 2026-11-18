@@ -10,6 +10,12 @@
 各ラウンドの音声・レポートは out-dir/round<N>/ に残り、全体の
 経過は out-dir/loop-report.md と loop-result.json にまとまります。
 
+運用ルール（2026-11-18 追加）:
+- ループが自動補正するのは話速・間のみ。ピッチ寄せ（特に下方向）と
+  文単位整形は安全策で対象外（opt-in は voice_adjust 側で明示）。
+- 類似度スコアは「型の数値的な近さ」であって自然さの指標ではない。
+  提出物はスコアに関わらず、必ず試聴チェックを通してから出す。
+
 使い方:
   python3 voice_loop.py --metrics test-output/gLv9_04OUyI/metrics.json \
       --text-file script.txt --engine local --rounds 3 \
@@ -72,8 +78,12 @@ def adjust_sheet(sheet, eff, gen_profile, ref_profile):
     目標値そのものではない（測定系の系統誤差 +0.09秒などを、目標を
     ずらして吸収するため。実測がお手本に一致しているのにシート目標
     との差を見て補正すると過補正になる——実測で確認した教訓）。
-    補正できるのは話速・間・ピッチ中央値。文単位の型（delta/span）は
-    整形側が直接目標に寄せるため、ここでは補正しない。
+    補正できるのは話速・間のみ（ループの主対象。類似度でも 95/100 点
+    まで到達した安全な項目）。ピッチ中央値の寄せと文単位の型
+    （delta/span）は補正しない：ピッチの大きな下方向シフトは local
+    土台で「野太く」不自然になり（2026-11-18 デモ実証でボブ評価
+    「怖い・野太い」）、文単位整形も既定オフ（opt-in）のため。
+    F0 の差は観測として記録するだけに留める。
     戻り値: (新シート, 補正内容の文字列リスト)
     """
     import copy
@@ -107,13 +117,15 @@ def adjust_sheet(sheet, eff, gen_profile, ref_profile):
                     f"（実測 {gen_gap:.2f} vs お手本 {ref_gap:.2f}）")
     gen_f0 = gen_profile.get("f0_median_hz")
     ref_f0 = sheet.get("reference_f0_median_hz")
-    if gen_f0 and ref_f0 and not sheet.get("match_reference_pitch"):
+    if gen_f0 and ref_f0:
+        # 安全策（2026-11-18）: 以前はここで match_reference_pitch を
+        # 自動で有効化していたが、それがデモの「野太さ」の経路に
+        # なったため廃止。F0 の差は観測記録のみ（補正はしない）。
         diff_st = abs(vp.hz_to_st(gen_f0, float(ref_f0)))
         if diff_st > 2.0:
-            sheet["match_reference_pitch"] = True
             notes.append(
-                f"ピッチ中央値のお手本寄せを有効化"
-                f"（実測との差 {diff_st:.1f} 半音）")
+                f"（観測のみ）F0中央値の差 {diff_st:.1f} 半音。"
+                "安全策のためピッチ寄せは自動では行わない")
     return sheet, notes
 
 
@@ -224,8 +236,10 @@ def run_loop(args):
     lines.append(f"最終シート: {fitted_path}")
     lines.append("")
     lines.append("※類似度は「型」の数値的な近さの物差しであり、"
-                 "声質そのものの似せ度ではありません。文単位の型は"
-                 "3分割整形による近似です。")
+                 "声質そのものの似せ度でも、自然さの指標でもありま"
+                 "せん（スコアが上がっても聞き心地は悪化し得ます）。"
+                 "自動補正の対象は話速・間のみ。提出前は必ず試聴"
+                 "チェックを通してください。")
     report_path = os.path.join(args.out_dir, "loop-report.md")
     with open(report_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines) + "\n")

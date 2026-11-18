@@ -463,6 +463,11 @@ def prosody_for_sheet(profile):
     文単位の型（文末パターンの比率、文ごとのピッチ変化と抑揚の幅の
     中央値）をシートに持たせるための辞書。生成側（voice_adjust）は
     apply_contour が真で、目標値がある場合に文単位のピッチ整形を行う。
+
+    安全策（2026-11-18、デモ実証の教訓）: apply_contour は既定オフ。
+    文単位整形は local 土台で不自然さ（ボブ評価「怖い」）を招いたため、
+    型データは記録するが整形の有効化は opt-in（シートで明示、または
+    synthesize の --apply-contour）に限る。
     """
     delta = profile.get("delta_median_st")
     span = profile.get("span_median_st")
@@ -471,7 +476,7 @@ def prosody_for_sheet(profile):
         "span_median_st": (round(span, 2) if span is not None else None),
         "final_ratios": profile.get("final_ratios"),
         "delta_source": profile.get("delta_source"),
-        "apply_contour": delta is not None or span is not None,
+        "apply_contour": False,
     }
 
 

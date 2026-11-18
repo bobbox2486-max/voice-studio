@@ -1,0 +1,138 @@
+{
+  "lang": "ja",
+  "count": 3,
+  "by_genre": {
+    "トーク・雑談": {
+      "count": 1,
+      "speed_speech": {
+        "n": 1,
+        "median": 414.316,
+        "q1": null,
+        "q3": null,
+        "min": 414.316,
+        "max": 414.316
+      },
+      "speed_overall": null,
+      "gap_median": {
+        "n": 1,
+        "median": 0.96,
+        "q1": null,
+        "q3": null,
+        "min": 0.96,
+        "max": 0.96
+      },
+      "f0_median_hz": {
+        "n": 1,
+        "median": 244.153,
+        "q1": null,
+        "q3": null,
+        "min": 244.153,
+        "max": 244.153
+      },
+      "delta_median_st": {
+        "n": 1,
+        "median": -2.856,
+        "q1": null,
+        "q3": null,
+        "min": -2.856,
+        "max": -2.856
+      },
+      "span_median_st": {
+        "n": 1,
+        "median": 9.656,
+        "q1": null,
+        "q3": null,
+        "min": 9.656,
+        "max": 9.656
+      }
+    },
+    "読み聞かせ": {
+      "count": 2,
+      "speed_speech": {
+        "n": 2,
+        "median": 308.149,
+        "q1": null,
+        "q3": null,
+        "min": 274.98,
+        "max": 341.317
+      },
+      "speed_overall": null,
+      "gap_median": {
+        "n": 2,
+        "median": 1.76,
+        "q1": null,
+        "q3": null,
+        "min": 0.74,
+        "max": 2.78
+      },
+      "f0_median_hz": {
+        "n": 2,
+        "median": 225.765,
+        "q1": null,
+        "q3": null,
+        "min": 217.62,
+        "max": 233.91
+      },
+      "delta_median_st": {
+        "n": 2,
+        "median": -0.837,
+        "q1": null,
+        "q3": null,
+        "min": -1.398,
+        "max": -0.275
+      },
+      "span_median_st": {
+        "n": 2,
+        "median": 8.15,
+        "q1": null,
+        "q3": null,
+        "min": 8.142,
+        "max": 8.158
+      }
+    }
+  },
+  "overall": {
+    "count": 3,
+    "speed_speech": {
+      "n": 3,
+      "median": 341.317,
+      "q1": null,
+      "q3": null,
+      "min": 274.98,
+      "max": 414.316
+    },
+    "speed_overall": null,
+    "gap_median": {
+      "n": 3,
+      "median": 0.96,
+      "q1": null,
+      "q3": null,
+      "min": 0.74,
+      "max": 2.78
+    },
+    "f0_median_hz": {
+      "n": 3,
+      "median": 233.91,
+      "q1": null,
+      "q3": null,
+      "min": 217.62,
+      "max": 244.153
+    },
+    "delta_median_st": {
+      "n": 3,
+      "median": -1.398,
+      "q1": null,
+      "q3": null,
+      "min": -2.856,
+      "max": -0.275
+    },
+    "span_median_st": {
+      "n": 3,
+      "median": 8.158,
+      "q1": null,
+      "q3": null,
+      "min": 8.142,
+      "max": 9.656
+    }
+  }
+}

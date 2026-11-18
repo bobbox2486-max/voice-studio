@@ -1,0 +1,63 @@
+{
+  "lang": "ja",
+  "count": 3,
+  "videos": [
+    {
+      "video_id": "gLv9_04OUyI",
+      "title": "【絵本 読み聞かせ】子供が好きなプリンセスとイヤイヤの絵本〜そんなのプリンセスじゃない〜",
+      "genre": "読み聞かせ",
+      "lang": "ja",
+      "metrics": "/home/hatch/workspace/ria-study/tools/test-output/gLv9_04OUyI/metrics.json",
+      "speed_speech": 341.3173652694611,
+      "speed_overall": null,
+      "gap_median": 0.74,
+      "f0_median_hz": 217.6198743494894,
+      "delta_median_st": -0.2751801393895558,
+      "span_median_st": 8.157708586470504,
+      "final_ratios": {
+        "rise": 0.3728813559322034,
+        "fall": 0.4576271186440678,
+        "flat": 0.1694915254237288
+      },
+      "delta_source": "per_sentence"
+    },
+    {
+      "video_id": "Y4h8mNqC1DQ",
+      "title": "【絵本読み聞かせ】ここまでで、いいよ｜女優 しらきかなが読むオリジナル絵本",
+      "genre": "読み聞かせ",
+      "lang": "ja",
+      "metrics": "/home/hatch/workspace/ria-study/tools/test-output/Y4h8mNqC1DQ/metrics.json",
+      "speed_speech": 274.98033044846585,
+      "speed_overall": null,
+      "gap_median": 2.78,
+      "f0_median_hz": 233.91025950073166,
+      "delta_median_st": -1.3982588658713049,
+      "span_median_st": 8.142129650515374,
+      "final_ratios": {
+        "rise": 0.3684210526315789,
+        "fall": 0.5263157894736842,
+        "flat": 0.10526315789473684
+      },
+      "delta_source": "per_sentence"
+    },
+    {
+      "video_id": "Wn6CGmmTH2Q",
+      "title": "【飲酒雑談】こんばんわいふ🌙【ぶいすぽ/八雲べに】",
+      "genre": "トーク・雑談",
+      "lang": "ja",
+      "metrics": "/home/hatch/workspace/ria-study/tools/test-output/Wn6CGmmTH2Q/metrics.json",
+      "speed_speech": 414.3158984088674,
+      "speed_overall": null,
+      "gap_median": 0.9600000000000364,
+      "f0_median_hz": 244.15297828674997,
+      "delta_median_st": -2.8561594657690983,
+      "span_median_st": 9.655897504666425,
+      "final_ratios": {
+        "rise": 0.16968325791855204,
+        "fall": 0.5746606334841629,
+        "flat": 0.25565610859728505
+      },
+      "delta_source": "desumasu_only"
+    }
+  ]
+}
